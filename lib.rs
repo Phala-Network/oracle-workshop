@@ -221,9 +221,11 @@ mod fat_badges {
         fn issue_badges() {
             let accounts = default_accounts();
 
-            // Alice can create a badge
             set_next_caller(accounts.alice);
             let mut fat_badges = FatBadges::new();
+            assert_eq!(fat_badges.admin, accounts.alice);
+
+            // Alice can create a badge
             let id = fat_badges
                 .new_badge("Phala Workshop: Easy".to_string())
                 .expect("Should be able to create badges");
