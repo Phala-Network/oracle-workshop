@@ -4,10 +4,7 @@ use ink_lang as ink;
 
 #[ink::contract]
 mod fat_badges {
-    use ink_prelude::{
-        vec::Vec,
-        string::String
-    };
+    use ink_prelude::{string::String, vec::Vec};
     use ink_storage::traits::{PackedLayout, SpreadAllocate, SpreadLayout};
     use ink_storage::Mapping;
     use scale::{Decode, Encode};
@@ -72,7 +69,7 @@ mod fat_badges {
         // Commands
 
         /// Creates a new badge and become the admin of the badge
-        /// 
+        ///
         /// Return the id of the badge.
         #[ink(message)]
         pub fn new_badge(&mut self, name: String) -> Result<u32> {
@@ -91,7 +88,7 @@ mod fat_badges {
         }
 
         /// Adds a badge issuer
-        /// 
+        ///
         /// The caller must be the badge admin.
         #[ink(message)]
         pub fn add_issuer(&mut self, id: u32, issuer: AccountId) -> Result<()> {
@@ -101,7 +98,7 @@ mod fat_badges {
         }
 
         /// Removes a badge issuer
-        /// 
+        ///
         /// The caller must be the badge admin.
         #[ink(message)]
         pub fn remove_issuer(&mut self, id: u32, issuer: AccountId) -> Result<()> {
@@ -178,8 +175,14 @@ mod fat_badges {
         #[ink(message)]
         pub fn get(&self, id: u32) -> Result<String> {
             let caller = self.env().caller();
-            let code_idx = self.badge_assignments.get((id, caller)).ok_or(Error::NotFound)?;
-            let code = self.badge_code.get((id, code_idx)).expect("Assigned code exists; qed.");
+            let code_idx = self
+                .badge_assignments
+                .get((id, caller))
+                .ok_or(Error::NotFound)?;
+            let code = self
+                .badge_code
+                .get((id, code_idx))
+                .expect("Assigned code exists; qed.");
             Ok(code)
         }
 
@@ -206,8 +209,7 @@ mod fat_badges {
         use super::*;
         use ink_lang as ink;
 
-        fn default_accounts(
-        ) -> ink_env::test::DefaultAccounts<ink_env::DefaultEnvironment> {
+        fn default_accounts() -> ink_env::test::DefaultAccounts<ink_env::DefaultEnvironment> {
             ink_env::test::default_accounts::<Environment>()
         }
 
@@ -235,17 +237,32 @@ mod fat_badges {
                 .new_badge("Phala Workshop: Advanced".to_string())
                 .expect("Should be able to create badges");
             set_next_caller(accounts.alice);
-            assert_eq!(fat_badges.add_issuer(id_adv, accounts.bob), Err(Error::BadOrigin), "Only the badge owner can add issuers");
-            assert_eq!(fat_badges.add_issuer(999, accounts.bob), Err(Error::BadgeNotFound), "Non-existing badge");
+            assert_eq!(
+                fat_badges.add_issuer(id_adv, accounts.bob),
+                Err(Error::BadOrigin),
+                "Only the badge owner can add issuers"
+            );
+            assert_eq!(
+                fat_badges.add_issuer(999, accounts.bob),
+                Err(Error::BadgeNotFound),
+                "Non-existing badge"
+            );
 
-            // Can remove an issuler
+            // Can remove an issuer
             assert!(fat_badges.add_issuer(id, accounts.charlie).is_ok());
             assert!(fat_badges.remove_issuer(id, accounts.charlie).is_ok());
+            assert!(!fat_badges.is_badge_issuer(id, accounts.charlie));
 
             // Can add code
-            assert!(fat_badges.add_code(id, vec!["code1".to_string(), "code2".to_string()]).is_ok());
+            assert!(fat_badges
+                .add_code(id, vec!["code1".to_string(), "code2".to_string()])
+                .is_ok());
             set_next_caller(accounts.bob);
-            assert_eq!(fat_badges.add_code(id, vec![]), Err(Error::BadOrigin), "Only the badge owner can add code");
+            assert_eq!(
+                fat_badges.add_code(id, vec![]),
+                Err(Error::BadOrigin),
+                "Only the badge owner can add code"
+            );
 
             // Check the badge stats
             let badge = fat_badges.get_badge_info(id).unwrap();
@@ -255,10 +272,18 @@ mod fat_badges {
             // Can issue badges to Django and Eve
             set_next_caller(accounts.alice);
             assert!(fat_badges.issue(id, accounts.django).is_ok());
-            assert_eq!(fat_badges.issue(id, accounts.django), Err(Error::Duplicated), "Cannot issue duplicated badges");
+            assert_eq!(
+                fat_badges.issue(id, accounts.django),
+                Err(Error::Duplicated),
+                "Cannot issue duplicated badges"
+            );
             set_next_caller(accounts.bob);
             assert!(fat_badges.issue(id, accounts.eve).is_ok());
-            assert_eq!(fat_badges.issue(id, accounts.frank), Err(Error::RunOutOfCode), "No code available to issue badges");
+            assert_eq!(
+                fat_badges.issue(id, accounts.frank),
+                Err(Error::RunOutOfCode),
+                "No code available to issue badges"
+            );
 
             // Adding a new code solves the problem
             set_next_caller(accounts.alice);
