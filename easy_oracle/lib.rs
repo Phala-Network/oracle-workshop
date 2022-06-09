@@ -6,7 +6,7 @@ use pink_extension as pink;
 mod easy_oracle {
     use super::pink::{http_get, PinkEnvironment};
     use crate::utils::attestation;
-    use ink_prelude::{string::String, vec::Vec};
+    use ink_prelude::{string::{String, ToString}, vec::Vec};
     use ink_storage::traits::SpreadAllocate;
     use ink_storage::Mapping;
     use scale::{Decode, Encode};
@@ -44,14 +44,6 @@ mod easy_oracle {
 
     /// Type alias for the contract's result type.
     pub type Result<T> = core::result::Result<T, Error>;
-
-    #[derive(PartialEq, Eq, Debug)]
-    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
-    struct GistUrl {
-        username: String,
-        gist_id: String,
-        filename: String,
-    }
 
     impl EasyOracle {
         #[ink(constructor)]
@@ -118,16 +110,11 @@ mod easy_oracle {
                 .ok_or(Error::BadgeContractNotSetUp)?;
 
             #[cfg(not(test))]
-            contract
-                .issue(*id, account)
-                .or(Err(Error::FailedToIssueBadge))?;
+            let r = contract.issue(*id, account);
             #[cfg(test)]
-            {
-                tests::with_badges_contract(|fat_badges| fat_badges.issue(*id, account))
-                    .or(Err(Error::FailedToIssueBadge))?;
-            }
+            let r = tests::with_badges_contract(|fat_badges| fat_badges.issue(*id, account));
 
-            Ok(())
+            r.or(Err(Error::FailedToIssueBadge))
         }
 
         // Queries
@@ -162,6 +149,14 @@ mod easy_oracle {
         pub fn get_id(&self) -> AccountId {
             self.env().account_id()
         }
+    }
+
+    #[derive(PartialEq, Eq, Debug)]
+    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
+    struct GistUrl {
+        username: String,
+        gist_id: String,
+        filename: String,
     }
 
     #[derive(Clone, Encode, Decode, Debug)]

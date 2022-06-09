@@ -4,7 +4,7 @@ pub mod attestation {
     use ink_prelude::vec::Vec;
     use ink_storage::traits::{PackedLayout, SpreadAllocate, SpreadLayout};
     use pink::{
-        chain_extension::SigType, derive_sr25519_key, get_public_key, sign, verify, PinkEnvironment,
+        chain_extension::SigType, derive_sr25519_key, get_public_key, sign, verify,
     };
     use pink_extension as pink;
     use scale::{Decode, Encode};
