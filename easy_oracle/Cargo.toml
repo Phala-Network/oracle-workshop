@@ -18,8 +18,10 @@ scale-info = { version = "2", default-features = false, features = ["derive"], o
 pink-extension = { version = "0.1.7", default-features = false }
 hex = { version = "0.4.3", default-features = false, features = ["alloc"] }
 
+fat_badges = { path = "../fat_badges", default-features = false, features = ["ink-as-dependency"] }
+
 [lib]
-name = "fat_badges"
+name = "easy_oracle"
 path = "lib.rs"
 crate-type = [
 	# Used for normal contract Wasm blobs.
@@ -36,5 +38,6 @@ std = [
     "scale/std",
     "scale-info/std",
     "pink-extension/std",
+    "fat_badges/std",
 ]
 ink-as-dependency = []

@@ -1,5 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+pub use fat_badges::{FatBadges, FatBadgesRef};
 use ink_lang as ink;
 
 #[ink::contract]
@@ -184,6 +185,12 @@ mod fat_badges {
                 .get((id, code_idx))
                 .expect("Assigned code exists; qed.");
             Ok(code)
+        }
+
+        /// Helper query to return the account id of the current contract instance
+        #[ink(message)]
+        pub fn get_id(&self) -> AccountId {
+            self.env().account_id()
         }
 
         // Helper functions

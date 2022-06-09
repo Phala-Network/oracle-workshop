@@ -4,19 +4,21 @@ use pink_extension as pink;
 
 #[pink::contract(env=PinkEnvironment)]
 mod easy_oracle {
-    use super::pink::{self, http_get, PinkEnvironment};
+    use super::pink::{http_get, PinkEnvironment};
     use crate::utils::attestation;
     use ink_prelude::{string::String, vec::Vec};
-    use ink_storage::traits::{PackedLayout, SpreadAllocate, SpreadLayout};
+    use ink_storage::traits::SpreadAllocate;
     use ink_storage::Mapping;
     use scale::{Decode, Encode};
+
+    use fat_badges::FatBadgesRef;
 
     #[ink(storage)]
     #[derive(SpreadAllocate)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct EasyOracle {
         admin: AccountId,
-        badge_contract_options: Option<(AccountId, u32)>,
+        badge_contract_options: Option<(FatBadgesRef, u32)>,
         attestation_verifier: attestation::Verifier,
         attestation_generator: attestation::Generator,
         linked_users: Mapping<String, ()>,
@@ -37,6 +39,7 @@ mod easy_oracle {
         InvalidSignature,
         UsernameAlreadyInUse,
         AccountAlreadyInUse,
+        FailedToIssueBadge,
     }
 
     /// Type alias for the contract's result type.
@@ -76,7 +79,10 @@ mod easy_oracle {
             if caller != self.admin {
                 return Err(Error::BadOrigin);
             }
-            self.badge_contract_options = Some((contract, badge_id));
+            // Create a reference to the already deployed FatBadges contract
+            use ink_env::call::FromAccountId;
+            let contract_ref = FatBadgesRef::from_account_id(contract);
+            self.badge_contract_options = Some((contract_ref, badge_id));
             Ok(())
         }
 
@@ -108,11 +114,18 @@ mod easy_oracle {
 
             let (contract, id) = self
                 .badge_contract_options
+                .as_mut()
                 .ok_or(Error::BadgeContractNotSetUp)?;
 
-            // TODO:
-            // cross-contract call:
-            //  FatBadge::issue(id, account).or(Err(Error::FailedToIssue))?
+            #[cfg(not(test))]
+            contract
+                .issue(*id, account)
+                .or(Err(Error::FailedToIssueBadge))?;
+            #[cfg(test)]
+            {
+                tests::with_badges_contract(|fat_badges| fat_badges.issue(*id, account))
+                    .or(Err(Error::FailedToIssueBadge))?;
+            }
 
             Ok(())
         }
@@ -142,6 +155,12 @@ mod easy_oracle {
             };
             let result = self.attestation_generator.sign(quote);
             Ok(result)
+        }
+
+        /// Helper query to return the account id of the current contract instance
+        #[ink(message)]
+        pub fn get_id(&self) -> AccountId {
+            self.env().account_id()
         }
     }
 
@@ -218,7 +237,29 @@ mod easy_oracle {
             ink_env::test::set_caller::<Environment>(caller);
         }
 
-        // ********************************
+        thread_local!(pub static TEST_HARNESS: std::cell::RefCell<Option<fat_badges::FatBadges>> = Default::default());
+
+        /// Initializes a FatBadges contract and return its address
+        fn init_mock_badge_contract() -> ink_env::AccountId {
+            TEST_HARNESS.with(|fat_badges| {
+                let badges_contract = fat_badges::FatBadges::new();
+                let contract_id = badges_contract.get_id();
+                *fat_badges.borrow_mut() = Some(badges_contract);
+                contract_id
+            })
+        }
+
+        /// Test harness to get contracts
+        pub fn with_badges_contract<F, R>(f: F) -> R
+        where
+            F: FnOnce(&mut fat_badges::FatBadges) -> R,
+        {
+            TEST_HARNESS.with(|fat_badges| {
+                let mut badges_contract_ref = fat_badges.borrow_mut();
+                let badges_contract = badges_contract_ref.as_mut().unwrap();
+                f(badges_contract)
+            })
+        }
 
         #[ink::test]
         fn can_parse_gist_url() {
@@ -237,17 +278,12 @@ mod easy_oracle {
 
         #[ink::test]
         fn can_decode_claim() {
-            use hex::FromHex;
-
             let ok = extract_claim(b"...This gist is owned by address: 0x0123456789012345678901234567890123456789012345678901234567890123...");
             assert_eq!(
                 ok,
-                Ok(AccountId::from(
-                    <[u8; 32]>::from_hex(
-                        "0123456789012345678901234567890123456789012345678901234567890123"
-                    )
-                    .unwrap()
-                ))
+                decode_accountid_256(
+                    b"0123456789012345678901234567890123456789012345678901234567890123"
+                )
             );
             // Bad cases
             assert_eq!(
@@ -264,59 +300,61 @@ mod easy_oracle {
             );
         }
 
-        // #[ink::test]
-        // fn end_to_end() {
-        //     use pink_extension::chain_extension::{mock, HttpResponse};
+        #[ink::test]
+        fn end_to_end() {
+            use pink_extension::chain_extension::{mock, HttpResponse};
 
-        //     // Mock derive key call (a pregenerated key pair)
-        //     mock::mock_derive_sr25519_key(|_| {
-        //         hex::decode("78003ee90ff2544789399de83c60fa50b3b24ca86c7512d0680f64119207c80ab240b41344968b3e3a71a02c0e8b454658e00e9310f443935ecadbdd1674c683").unwrap()
-        //     });
-        //     mock::mock_get_public_key(|_| {
-        //         hex::decode("ce786c340288b79a951c68f87da821d6c69abd1899dff695bda95e03f9c0b012")
-        //             .unwrap()
-        //     });
-        //     mock::mock_sign(|_| b"mock-signature".to_vec());
-        //     mock::mock_verify(|_| true);
+            // Mock derive key call (a pregenerated key pair)
+            mock::mock_derive_sr25519_key(|_| {
+                hex::decode("78003ee90ff2544789399de83c60fa50b3b24ca86c7512d0680f64119207c80ab240b41344968b3e3a71a02c0e8b454658e00e9310f443935ecadbdd1674c683").unwrap()
+            });
+            mock::mock_get_public_key(|_| {
+                hex::decode("ce786c340288b79a951c68f87da821d6c69abd1899dff695bda95e03f9c0b012")
+                    .unwrap()
+            });
+            mock::mock_sign(|_| b"mock-signature".to_vec());
+            mock::mock_verify(|_| true);
 
-        //     // Test accounts
-        //     let accounts = default_accounts();
+            // Test accounts
+            let accounts = default_accounts();
+            let badges_contract_id = init_mock_badge_contract();
 
-        //     // Construct a contract (deployed by `accounts.alice` by default)
-        //     let mut contract = EasyOracle::new();
-        //     assert_eq!(contract.admin, accounts.alice);
-        //     // Admin (alice) can set POAP
-        //     assert!(contract
-        //         .admin_set_poap_code(vec!["code0".to_string(), "code1".to_string(),])
-        //         .is_ok());
-        //     // Generate an attestation
-        //     //
-        //     // Mock a http request first (the 256 bits account id is the pubkey of Alice)
-        //     mock::mock_http_request(|_| {
-        //         HttpResponse::ok(b"This gist is owned by address: 0x0101010101010101010101010101010101010101010101010101010101010101".to_vec())
-        //     });
-        //     let result = contract.attest_gist("https://gist.githubusercontent.com/h4x3rotab/0cabeb528bdaf30e4cf741e26b714e04/raw/620f958fb92baba585a77c1854d68dc986803b4e/test%2520gist".to_string());
-        //     assert!(result.is_ok());
-        //     let attestation = result.unwrap();
-        //     assert_eq!(attestation.attestation.username, "h4x3rotab");
-        //     assert_eq!(attestation.attestation.account_id, accounts.alice);
-        //     // Before redeem
-        //     assert_eq!(contract.my_poap(), None);
-        //     // Redeem
-        //     assert!(contract.redeem(attestation).is_ok());
-        //     assert_eq!(contract.total_redeemed, 1);
-        //     assert_eq!(
-        //         contract.account_by_username.get("h4x3rotab".to_string()),
-        //         Some(accounts.alice)
-        //     );
-        //     assert_eq!(
-        //         contract.username_by_account.get(&accounts.alice),
-        //         Some("h4x3rotab".to_string())
-        //     );
-        //     assert_eq!(contract.redeem_by_account.get(accounts.alice), Some(0));
-        //     // Check my redemption code
-        //     assert_eq!(contract.my_poap(), Some("code0".to_string()))
-        // }
+            // Construct a contract (deployed by `accounts.alice` by default)
+            let mut contract = EasyOracle::new();
+
+            // Create a badge and set the oracle as its issuer
+            let id = with_badges_contract(|badges_contract| {
+                let id = badges_contract.new_badge("test-badge".to_string()).unwrap();
+                assert!(badges_contract
+                    .add_code(id, vec!["code1".to_string(), "code2".to_string()])
+                    .is_ok());
+                assert!(contract.config_issuer(badges_contract_id, id).is_ok());
+                id
+            });
+
+            // Generate an attestation
+            //
+            // Mock a http request first (the 256 bits account id is the pubkey of Alice)
+            mock::mock_http_request(|_| {
+                HttpResponse::ok(b"This gist is owned by address: 0x0101010101010101010101010101010101010101010101010101010101010101".to_vec())
+            });
+            let result = contract.attest_gist("https://gist.githubusercontent.com/h4x3rotab/0cabeb528bdaf30e4cf741e26b714e04/raw/620f958fb92baba585a77c1854d68dc986803b4e/test%2520gist".to_string());
+            assert!(result.is_ok());
+
+            let attestation = result.unwrap();
+            assert_eq!(attestation.data.username, "h4x3rotab");
+            assert_eq!(attestation.data.account_id, accounts.alice);
+
+            // Before redeem
+            with_badges_contract(|badges_contract| assert!(badges_contract.get(id).is_err()));
+
+            // Redeem
+            assert!(contract.redeem(attestation).is_ok());
+
+            with_badges_contract(|badges_contract| {
+                assert_eq!(badges_contract.get(id), Ok("code1".to_string()))
+            });
+        }
     }
 }
 
