@@ -6,7 +6,10 @@ use pink_extension as pink;
 mod easy_oracle {
     use super::pink::{http_get, PinkEnvironment};
     use crate::utils::attestation;
-    use ink_prelude::{string::{String, ToString}, vec::Vec};
+    use ink_prelude::{
+        string::{String, ToString},
+        vec::Vec,
+    };
     use ink_storage::traits::SpreadAllocate;
     use ink_storage::Mapping;
     use scale::{Decode, Encode};
@@ -97,10 +100,7 @@ mod easy_oracle {
                 return Err(Error::NoPermission);
             }
 
-            let username = data.username;
-            let account = data.account_id;
-
-            if self.linked_users.contains(username) {
+            if self.linked_users.contains(data.username) {
                 return Err(Error::UsernameAlreadyInUse);
             }
 
@@ -110,9 +110,10 @@ mod easy_oracle {
                 .ok_or(Error::BadgeContractNotSetUp)?;
 
             #[cfg(not(test))]
-            let r = contract.issue(*id, account);
+            let r = contract.issue(*id, data.account_id);
             #[cfg(test)]
-            let r = tests::with_badges_contract(|fat_badges| fat_badges.issue(*id, account));
+            let r =
+                tests::with_badges_contract(|fat_badges| fat_badges.issue(*id, data.account_id));
 
             r.or(Err(Error::FailedToIssueBadge))
         }
