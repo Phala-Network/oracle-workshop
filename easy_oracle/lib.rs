@@ -1,5 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+#[cfg(test)]
 #[macro_use]
 extern crate environmental;
 use pink_extension as pink;
@@ -235,6 +236,8 @@ mod easy_oracle {
             ink_env::test::set_caller::<Environment>(caller);
         }
 
+        // For mocking the upstream contract. Read more here:
+        // <https://github.com/paritytech/ink/issues/788#issuecomment-1152203576>
         environmental!(mock_badges: fat_badges::FatBadges);
 
         #[ink::test]

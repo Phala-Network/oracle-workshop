@@ -9,7 +9,6 @@ edition = "2021"
 ink_prelude = { version = "3", default-features = false }
 ink_primitives = { version = "3", default-features = false }
 ink_metadata = { version = "3", default-features = false, features = ["derive"], optional = true }
-ink_env = { version = "3", default-features = false }
 ink_storage = { version = "3", default-features = false }
 ink_lang = { version = "3", default-features = false }
 
@@ -22,10 +21,9 @@ hex = { version = "0.4.3", default-features = false, features = ["alloc"] }
 [features]
 default = ["std"]
 std = [
-    "ink_metadata/std",
-    "ink_env/std",
-    "ink_storage/std",
     "ink_primitives/std",
+    "ink_metadata/std",
+    "ink_storage/std",
     "scale/std",
     "scale-info/std",
     "pink-extension/std",
