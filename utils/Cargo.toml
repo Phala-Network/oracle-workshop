@@ -1,8 +1,9 @@
 [package]
-name = "easy_oracle"
+name = "fat_utils"
 version = "0.1.0"
-authors = ["Hang Yin <hangyin@phala.network>"]
 edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 ink_prelude = { version = "3", default-features = false }
@@ -18,18 +19,6 @@ scale-info = { version = "2", default-features = false, features = ["derive"], o
 pink-extension = { version = "0.1.7", default-features = false }
 hex = { version = "0.4.3", default-features = false, features = ["alloc"] }
 
-fat_badges = { path = "../fat_badges", default-features = false, features = ["ink-as-dependency"] }
-fat_utils = { path = "../utils", default-features = false }
-environmental = { path = "../utils/environmental", default-features = false }
-
-[lib]
-name = "easy_oracle"
-path = "lib.rs"
-crate-type = [
-	# Used for normal contract Wasm blobs.
-	"cdylib",
-]
-
 [features]
 default = ["std"]
 std = [
@@ -40,7 +29,4 @@ std = [
     "scale/std",
     "scale-info/std",
     "pink-extension/std",
-    "fat_badges/std",
-    "fat_utils/std",
 ]
-ink-as-dependency = []

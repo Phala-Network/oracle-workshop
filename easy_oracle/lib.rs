@@ -1,11 +1,13 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+#[macro_use]
+extern crate environmental;
 use pink_extension as pink;
 
 #[pink::contract(env=PinkEnvironment)]
 mod easy_oracle {
     use super::pink::{http_get, PinkEnvironment};
-    use crate::utils::attestation;
+    use fat_utils::attestation;
     use ink_prelude::{
         string::{String, ToString},
         vec::Vec,
@@ -112,8 +114,8 @@ mod easy_oracle {
             #[cfg(not(test))]
             let r = contract.issue(*id, data.account_id);
             #[cfg(test)]
-            let r =
-                tests::with_badges_contract(|fat_badges| fat_badges.issue(*id, data.account_id));
+            let r = tests::mock_badges::with(|fat_badges| fat_badges.issue(*id, data.account_id))
+                .unwrap();
 
             r.or(Err(Error::FailedToIssueBadge))
         }
@@ -233,29 +235,7 @@ mod easy_oracle {
             ink_env::test::set_caller::<Environment>(caller);
         }
 
-        thread_local!(pub static TEST_HARNESS: std::cell::RefCell<Option<fat_badges::FatBadges>> = Default::default());
-
-        /// Initializes a FatBadges contract and return its address
-        fn init_mock_badge_contract() -> ink_env::AccountId {
-            TEST_HARNESS.with(|fat_badges| {
-                let badges_contract = fat_badges::FatBadges::new();
-                let contract_id = badges_contract.get_id();
-                *fat_badges.borrow_mut() = Some(badges_contract);
-                contract_id
-            })
-        }
-
-        /// Test harness to get contracts
-        pub fn with_badges_contract<F, R>(f: F) -> R
-        where
-            F: FnOnce(&mut fat_badges::FatBadges) -> R,
-        {
-            TEST_HARNESS.with(|fat_badges| {
-                let mut badges_contract_ref = fat_badges.borrow_mut();
-                let badges_contract = badges_contract_ref.as_mut().unwrap();
-                f(badges_contract)
-            })
-        }
+        environmental!(mock_badges: fat_badges::FatBadges);
 
         #[ink::test]
         fn can_parse_gist_url() {
@@ -313,20 +293,18 @@ mod easy_oracle {
 
             // Test accounts
             let accounts = default_accounts();
-            let badges_contract_id = init_mock_badge_contract();
+            let mut badges = fat_badges::FatBadges::new();
+            let badges_id = badges.get_id();
 
             // Construct a contract (deployed by `accounts.alice` by default)
             let mut contract = EasyOracle::new();
 
             // Create a badge and set the oracle as its issuer
-            let id = with_badges_contract(|badges_contract| {
-                let id = badges_contract.new_badge("test-badge".to_string()).unwrap();
-                assert!(badges_contract
-                    .add_code(id, vec!["code1".to_string(), "code2".to_string()])
-                    .is_ok());
-                assert!(contract.config_issuer(badges_contract_id, id).is_ok());
-                id
-            });
+            let id = badges.new_badge("test-badge".to_string()).unwrap();
+            assert!(badges
+                .add_code(id, vec!["code1".to_string(), "code2".to_string()])
+                .is_ok());
+            assert!(contract.config_issuer(badges_id, id).is_ok());
 
             // Generate an attestation
             //
@@ -342,16 +320,15 @@ mod easy_oracle {
             assert_eq!(attestation.data.account_id, accounts.alice);
 
             // Before redeem
-            with_badges_contract(|badges_contract| assert!(badges_contract.get(id).is_err()));
+            assert!(badges.get(id).is_err());
 
-            // Redeem
-            assert!(contract.redeem(attestation).is_ok());
-
-            with_badges_contract(|badges_contract| {
-                assert_eq!(badges_contract.get(id), Ok("code1".to_string()))
+            // Redeem and check if the contract as the code distributed
+            mock_badges::using(&mut badges, || {
+                // Wrap the call with `using()` because the badge contract reference is mocked with
+                // `badges`.
+                assert!(contract.redeem(attestation).is_ok());
             });
+            assert_eq!(badges.get(id), Ok("code1".to_string()));
         }
     }
 }
-
-mod utils;

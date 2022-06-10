@@ -4,4 +4,6 @@ resolver = "2"
 members = [
     "fat_badges",
     "easy_oracle",
+    "utils",
+    "utils/environmental",
 ]
