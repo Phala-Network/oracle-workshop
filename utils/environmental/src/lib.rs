@@ -205,9 +205,9 @@ pub fn with<T: ?Sized, R, F: FnOnce(&mut T) -> R>(
 /// ```
 #[macro_export]
 macro_rules! environmental {
-	($name:ident : $t:ty) => {
+	($vis:vis $name:ident : $t:ty) => {
 		#[allow(non_camel_case_types)]
-		pub struct $name { __private_field: () }
+		$vis struct $name { __private_field: () }
 
 		$crate::thread_local_impl! {
 			static GLOBAL: $crate::GlobalInner<$t> = Default::default()
@@ -230,9 +230,9 @@ macro_rules! environmental {
 			}
 		}
 	};
-	($name:ident : trait @$t:ident [$($args:ty,)*]) => {
+	($vis:vis $name:ident : trait @$t:ident [$($args:ty,)*]) => {
 		#[allow(non_camel_case_types, dead_code)]
-		struct $name { __private_field: () }
+		$vis struct $name { __private_field: () }
 
 		$crate::thread_local_impl! {
 			static GLOBAL: $crate::GlobalInner<(dyn $t<$($args),*> + 'static)>
@@ -259,9 +259,9 @@ macro_rules! environmental {
 			}
 		}
 	};
-	($name:ident<$traittype:ident> : trait $t:ident <$concretetype:ty>) => {
+	($vis:vis $name:ident<$traittype:ident> : trait $t:ident <$concretetype:ty>) => {
 		#[allow(non_camel_case_types, dead_code)]
-		struct $name <H: $traittype> { _private_field: $crate::PhantomData<H> }
+		$vis struct $name <H: $traittype> { _private_field: $crate::PhantomData<H> }
 
 		$crate::thread_local_impl! {
 			static GLOBAL: $crate::GlobalInner<(dyn $t<$concretetype> + 'static)>
@@ -287,11 +287,11 @@ macro_rules! environmental {
 			}
 		}
 	};
-	($name:ident : trait $t:ident <>) => { $crate::environmental! { $name : trait @$t [] } };
-	($name:ident : trait $t:ident < $($args:ty),* $(,)* >) => {
-		$crate::environmental! { $name : trait @$t [$($args,)*] }
+	($vis:vis $name:ident : trait $t:ident <>) => { $crate::environmental! {$vis $name : trait @$t [] } };
+	($vis:vis $name:ident : trait $t:ident < $($args:ty),* $(,)* >) => {
+		$crate::environmental! { $vis $name : trait @$t [$($args,)*] }
 	};
-	($name:ident : trait $t:ident) => { $crate::environmental! { $name : trait @$t [] } };
+	($vis:vis $name:ident : trait $t:ident) => { $crate::environmental! { $vis $name : trait @$t [] } };
 }
 
 #[cfg(test)]
