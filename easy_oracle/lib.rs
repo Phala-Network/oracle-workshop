@@ -239,7 +239,7 @@ mod easy_oracle {
         // For mocking the upstream contract. Read more here:
         // <https://github.com/paritytech/ink/issues/788#issuecomment-1152203576>
         environmental!(pub mock_badges: fat_badges::FatBadges);
-        
+
         #[ink::test]
         fn can_parse_gist_url() {
             let result = parse_gist_url("https://gist.githubusercontent.com/h4x3rotab/0cabeb528bdaf30e4cf741e26b714e04/raw/620f958fb92baba585a77c1854d68dc986803b4e/test%2520gist");
