@@ -20,6 +20,8 @@ hex = { version = "0.4.3", default-features = false, features = ["alloc"] }
 
 fat_badges = { path = "../fat_badges", default-features = false, features = ["ink-as-dependency"] }
 fat_utils = { path = "../utils", default-features = false }
+
+[dev-dependencies]
 environmental = { path = "../utils/environmental", default-features = false }
 
 [lib]

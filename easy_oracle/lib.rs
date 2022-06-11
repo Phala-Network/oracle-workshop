@@ -1,8 +1,5 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-#[cfg(test)]
-#[macro_use]
-extern crate environmental;
 use pink_extension as pink;
 
 #[pink::contract(env=PinkEnvironment)]
@@ -86,7 +83,7 @@ mod easy_oracle {
 
         /// Redeems a POAP with a signed `attestation`. (callable)
         ///
-        /// The attestation must be created by [attest_gist] function. After the verification of
+        /// The attestation must be created by [`attest_gist`] function. After the verification of
         /// the attestation, the the sender account will the linked to a Github username. Then a
         /// POAP redemption code will be allocated to the sender.
         ///
@@ -156,7 +153,6 @@ mod easy_oracle {
     }
 
     #[derive(PartialEq, Eq, Debug)]
-    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     struct GistUrl {
         username: String,
         gist_id: String,
@@ -238,7 +234,7 @@ mod easy_oracle {
 
         // For mocking the upstream contract. Read more here:
         // <https://github.com/paritytech/ink/issues/788#issuecomment-1152203576>
-        environmental!(pub mock_badges: fat_badges::FatBadges);
+        environmental::environmental!(pub mock_badges: fat_badges::FatBadges);
 
         #[ink::test]
         fn can_parse_gist_url() {
