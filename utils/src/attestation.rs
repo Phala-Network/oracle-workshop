@@ -60,7 +60,10 @@ impl Generator {
     pub fn sign<T: Clone + Encode + Decode>(&self, data: T) -> Attestation {
         let encoded = Encode::encode(&data);
         let signature = sign!(&encoded, &self.privkey, SigType::Sr25519);
-        Attestation { data: encoded, signature }
+        Attestation {
+            data: encoded,
+            signature,
+        }
     }
 }
 

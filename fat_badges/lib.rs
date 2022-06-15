@@ -1,7 +1,8 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-pub use crate::fat_badges::{FatBadges, FatBadgesRef};
 use ink_lang as ink;
+
+pub use crate::fat_badges::{FatBadges, Result};
 
 #[ink::contract]
 mod fat_badges {

@@ -2,9 +2,26 @@
 
 use pink_extension as pink;
 
+// Define a trait for cross-contract call. Necessary to enable it in unit tests.
+pub mod issuable {
+    use ink_env::AccountId;
+    use ink_lang as ink;
+
+    #[openbrush::trait_definition(mock = fat_badges::FatBadges)]
+    pub trait Issuable {
+        #[ink(message)]
+        fn issue(&mut self, id: u32, dest: AccountId) -> fat_badges::Result<()>;
+    }
+
+    #[openbrush::wrapper]
+    pub type IssuableRef = dyn Issuable;
+}
+
 #[pink::contract(env=PinkEnvironment)]
 mod easy_oracle {
-    use super::pink::{http_get, PinkEnvironment};
+    use crate::issuable::IssuableRef;
+    use crate::pink::{http_get, PinkEnvironment};
+
     use fat_utils::attestation;
     use ink_prelude::{
         string::{String, ToString},
@@ -14,14 +31,12 @@ mod easy_oracle {
     use ink_storage::Mapping;
     use scale::{Decode, Encode};
 
-    use fat_badges::FatBadgesRef;
-
     #[ink(storage)]
     #[derive(SpreadAllocate)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct EasyOracle {
         admin: AccountId,
-        badge_contract_options: Option<(FatBadgesRef, u32)>,
+        badge_contract_options: Option<(AccountId, u32)>,
         attestation_verifier: attestation::Verifier,
         attestation_generator: attestation::Generator,
         linked_users: Mapping<String, ()>,
@@ -75,9 +90,7 @@ mod easy_oracle {
                 return Err(Error::BadOrigin);
             }
             // Create a reference to the already deployed FatBadges contract
-            use ink_env::call::FromAccountId;
-            let contract_ref = FatBadgesRef::from_account_id(contract);
-            self.badge_contract_options = Some((contract_ref, badge_id));
+            self.badge_contract_options = Some((contract, badge_id));
             Ok(())
         }
 
@@ -91,7 +104,10 @@ mod easy_oracle {
         #[ink(message)]
         pub fn redeem(&mut self, attestation: attestation::Attestation) -> Result<()> {
             // Verify the attestation
-            let data: GistQuote = self.attestation_verifier.verify_as(&attestation).ok_or(Error::InvalidSignature)?;
+            let data: GistQuote = self
+                .attestation_verifier
+                .verify_as(&attestation)
+                .ok_or(Error::InvalidSignature)?;
             // The caller must be the attested account
             if data.account_id != self.env().caller() {
                 return Err(Error::NoPermission);
@@ -106,13 +122,10 @@ mod easy_oracle {
                 .as_mut()
                 .ok_or(Error::BadgeContractNotSetUp)?;
 
-            #[cfg(not(test))]
-            let r = contract.issue(*id, data.account_id);
-            #[cfg(test)]
-            let r = tests::mock_badges::with(|fat_badges| fat_badges.issue(*id, data.account_id))
-                .unwrap();
-
-            r.or(Err(Error::FailedToIssueBadge))
+            let badges: &IssuableRef = contract;
+            badges
+                .issue(*id, data.account_id)
+                .or(Err(Error::FailedToIssueBadge))
         }
 
         // Queries
@@ -229,10 +242,6 @@ mod easy_oracle {
             ink_env::test::set_caller::<Environment>(caller);
         }
 
-        // For mocking the upstream contract. Read more here:
-        // <https://github.com/paritytech/ink/issues/788#issuecomment-1152203576>
-        environmental::environmental!(pub mock_badges: fat_badges::FatBadges);
-
         #[ink::test]
         fn can_parse_gist_url() {
             let result = parse_gist_url("https://gist.githubusercontent.com/h4x3rotab/0cabeb528bdaf30e4cf741e26b714e04/raw/620f958fb92baba585a77c1854d68dc986803b4e/test%2520gist");
@@ -320,7 +329,7 @@ mod easy_oracle {
             assert!(badges.get(id).is_err());
 
             // Redeem and check if the contract as the code distributed
-            mock_badges::using(&mut badges, || {
+            crate::issuable::MockIssuable::using(&mut badges, || {
                 // Wrap the call with `using()` because the badge contract reference is mocked with
                 // `badges`.
                 assert!(contract.redeem(attestation).is_ok());
