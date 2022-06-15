@@ -89,12 +89,9 @@ mod easy_oracle {
         ///
         /// Each blockchain account and github account can only be linked once.
         #[ink(message)]
-        pub fn redeem(&mut self, attestation: attestation::Attestation<GistQuote>) -> Result<()> {
+        pub fn redeem(&mut self, attestation: attestation::Attestation) -> Result<()> {
             // Verify the attestation
-            if !self.attestation_verifier.verify(&attestation) {
-                return Err(Error::InvalidSignature);
-            }
-            let data = attestation.data;
+            let data: GistQuote = self.attestation_verifier.verify_as(&attestation).ok_or(Error::InvalidSignature)?;
             // The caller must be the attested account
             if data.account_id != self.env().caller() {
                 return Err(Error::NoPermission);
@@ -126,7 +123,7 @@ mod easy_oracle {
         /// is owned by address: 0x..."). Once the claim is verified, it returns a signed
         /// attestation with the pair `(github_username, account_id)`.
         #[ink(message)]
-        pub fn attest_gist(&self, url: String) -> Result<attestation::Attestation<GistQuote>> {
+        pub fn attest_gist(&self, url: String) -> Result<attestation::Attestation> {
             // Verify the URL
             let gist_url = parse_gist_url(&url)?;
             // Fetch the gist content
@@ -315,8 +312,9 @@ mod easy_oracle {
             assert!(result.is_ok());
 
             let attestation = result.unwrap();
-            assert_eq!(attestation.data.username, "h4x3rotab");
-            assert_eq!(attestation.data.account_id, accounts.alice);
+            let data: GistQuote = Decode::decode(&mut &attestation.data[..]).unwrap();
+            assert_eq!(data.username, "h4x3rotab");
+            assert_eq!(data.account_id, accounts.alice);
 
             // Before redeem
             assert!(badges.get(id).is_err());

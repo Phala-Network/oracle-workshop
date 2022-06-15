@@ -9,8 +9,8 @@ use scale::{Decode, Encode};
 /// A signed payload produced by a [`Generator`], and can be validated by [`Verifier`].
 #[derive(Clone, Encode, Decode)]
 #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
-pub struct Attestation<T: Encode + Decode + Clone> {
-    pub data: T,
+pub struct Attestation {
+    pub data: Vec<u8>,
     pub signature: Vec<u8>,
     // TODO: add metadata
 }
@@ -27,14 +27,21 @@ pub struct Verifier {
 
 impl Verifier {
     /// Verifies an attestation
-    pub fn verify<T: Clone + Encode + Decode>(&self, attestation: &Attestation<T>) -> bool {
-        let encoded = Encode::encode(&attestation.data);
+    pub fn verify(&self, attestation: &Attestation) -> bool {
         verify!(
-            &encoded,
+            &attestation.data,
             &self.pubkey,
             &attestation.signature,
             SigType::Sr25519
         )
+    }
+
+    /// Verifies an attestation and decodes the inner data
+    pub fn verify_as<T: Decode>(&self, attestation: &Attestation) -> Option<T> {
+        if !self.verify(&attestation) {
+            return None;
+        }
+        Decode::decode(&mut &attestation.data[..]).ok()
     }
 }
 
@@ -50,10 +57,10 @@ pub struct Generator {
 
 impl Generator {
     /// Produces a signed attestation with the given `data`
-    pub fn sign<T: Clone + Encode + Decode>(&self, data: T) -> Attestation<T> {
+    pub fn sign<T: Clone + Encode + Decode>(&self, data: T) -> Attestation {
         let encoded = Encode::encode(&data);
         let signature = sign!(&encoded, &self.privkey, SigType::Sr25519);
-        Attestation::<T> { data, signature }
+        Attestation { data: encoded, signature }
     }
 }
 
@@ -98,7 +105,6 @@ mod test {
 
         let (generator, verifier) = create(b"salt");
         let attestation = generator.sign(SomeData { x: 123 });
-        assert_eq!(attestation.data.x, 123);
         assert!(verifier.verify(&attestation));
     }
 }
