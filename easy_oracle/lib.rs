@@ -1,4 +1,5 @@
 #![cfg_attr(not(feature = "std"), no_std)]
+#![feature(trace_macros)]
 
 use pink_extension as pink;
 
@@ -7,11 +8,15 @@ pub mod issuable {
     use ink_env::AccountId;
     use ink_lang as ink;
 
+    trace_macros!(true);
+
     #[openbrush::trait_definition(mock = fat_badges::FatBadges)]
     pub trait Issuable {
         #[ink(message)]
         fn issue(&mut self, id: u32, dest: AccountId) -> fat_badges::Result<()>;
     }
+
+    trace_macros!(false);
 
     #[openbrush::wrapper]
     pub type IssuableRef = dyn Issuable;
@@ -232,6 +237,7 @@ mod easy_oracle {
     #[cfg(test)]
     mod tests {
         use super::*;
+        use ink_env::AccountId;
         use ink_lang as ink;
 
         fn default_accounts() -> ink_env::test::DefaultAccounts<PinkEnvironment> {
@@ -298,43 +304,56 @@ mod easy_oracle {
 
             // Test accounts
             let accounts = default_accounts();
-            let mut badges = fat_badges::FatBadges::new();
-            let badges_id = badges.get_id();
 
-            // Construct a contract (deployed by `accounts.alice` by default)
-            let mut contract = EasyOracle::new();
+            use crate::issuable::mock_issuable;
+            use openbrush::traits::mock::{Addressable, ManagedCallStack};
+            use std::{cell::RefCell, rc::Rc};
 
-            // Create a badge and set the oracle as its issuer
-            let id = badges.new_badge("test-badge".to_string()).unwrap();
-            assert!(badges
-                .add_code(id, vec!["code1".to_string(), "code2".to_string()])
-                .is_ok());
-            assert!(contract.config_issuer(badges_id, id).is_ok());
+            let stack = ManagedCallStack::create_shared(accounts.alice);
+            mock_issuable::using(stack.clone(), || {
+                // Deploy a FatBadges contract
+                let badges = mock_issuable::deploy(fat_badges::FatBadges::new());
 
-            // Generate an attestation
-            //
-            // Mock a http request first (the 256 bits account id is the pubkey of Alice)
-            mock::mock_http_request(|_| {
-                HttpResponse::ok(b"This gist is owned by address: 0x0101010101010101010101010101010101010101010101010101010101010101".to_vec())
+                // Construct our contract (deployed by `accounts.alice` by default)
+                let contract = Addressable::create_native(1, EasyOracle::new(), stack);
+
+                // Create a badge and add the oracle contract as its issuer
+                let id = badges
+                    .call_mut()
+                    .new_badge("test-badge".to_string())
+                    .unwrap();
+                assert!(badges
+                    .call_mut()
+                    .add_code(id, vec!["code1".to_string(), "code2".to_string()])
+                    .is_ok());
+                assert!(badges.call_mut().add_issuer(id, contract.id()).is_ok());
+                // Tell the oracle the badges are ready to issue
+                assert!(contract.call_mut().config_issuer(badges.id(), id).is_ok());
+
+                // Generate an attestation
+                //
+                // Mock a http request first (the 256 bits account id is the pubkey of Alice)
+                mock::mock_http_request(|_| {
+                    HttpResponse::ok(b"This gist is owned by address: 0x0101010101010101010101010101010101010101010101010101010101010101".to_vec())
+                });
+                let result = contract.call().attest_gist("https://gist.githubusercontent.com/h4x3rotab/0cabeb528bdaf30e4cf741e26b714e04/raw/620f958fb92baba585a77c1854d68dc986803b4e/test%2520gist".to_string());
+                assert!(result.is_ok());
+
+                let attestation = result.unwrap();
+                let data: GistQuote = Decode::decode(&mut &attestation.data[..]).unwrap();
+                assert_eq!(data.username, "h4x3rotab");
+                assert_eq!(data.account_id, accounts.alice);
+
+                // Before redeem
+                assert!(badges.call().get(id).is_err());
+
+                // Redeem and check if the contract as the code distributed
+                contract
+                    .call_mut()
+                    .redeem(attestation)
+                    .expect("Should be able to issue badge");
+                assert_eq!(badges.call().get(id), Ok("code1".to_string()));
             });
-            let result = contract.attest_gist("https://gist.githubusercontent.com/h4x3rotab/0cabeb528bdaf30e4cf741e26b714e04/raw/620f958fb92baba585a77c1854d68dc986803b4e/test%2520gist".to_string());
-            assert!(result.is_ok());
-
-            let attestation = result.unwrap();
-            let data: GistQuote = Decode::decode(&mut &attestation.data[..]).unwrap();
-            assert_eq!(data.username, "h4x3rotab");
-            assert_eq!(data.account_id, accounts.alice);
-
-            // Before redeem
-            assert!(badges.get(id).is_err());
-
-            // Redeem and check if the contract as the code distributed
-            crate::issuable::MockIssuable::using(&mut badges, || {
-                // Wrap the call with `using()` because the badge contract reference is mocked with
-                // `badges`.
-                assert!(contract.redeem(attestation).is_ok());
-            });
-            assert_eq!(badges.get(id), Ok("code1".to_string()));
         }
     }
 }

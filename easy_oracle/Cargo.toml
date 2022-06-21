@@ -24,6 +24,7 @@ fat_utils = { path = "../utils", default-features = false }
 
 [dev-dependencies]
 environmental = { path = "../utils/environmental", default-features = false }
+fat_badges = { path = "../fat_badges", default-features = false, features = ["ink-as-dependency", "mockable"] }
 
 [lib]
 name = "easy_oracle"
