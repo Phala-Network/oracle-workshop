@@ -216,105 +216,114 @@ mod fat_badges {
     mod tests {
         use super::*;
         use ink_lang as ink;
+        use openbrush::traits::mock::{Addressable, SharedCallStack};
 
         fn default_accounts() -> ink_env::test::DefaultAccounts<ink_env::DefaultEnvironment> {
             ink_env::test::default_accounts::<Environment>()
-        }
-
-        fn set_next_caller(caller: AccountId) {
-            ink_env::test::set_caller::<Environment>(caller);
         }
 
         #[ink::test]
         fn issue_badges() {
             let accounts = default_accounts();
 
-            set_next_caller(accounts.alice);
-            let mut fat_badges = FatBadges::new();
-            assert_eq!(fat_badges.admin, accounts.alice);
+            let stack = SharedCallStack::new(accounts.alice);
+            let fat_badges = Addressable::create_native(1, FatBadges::new(), stack.clone());
+            assert_eq!(fat_badges.call().admin, accounts.alice);
 
             // Alice can create a badge
             let id = fat_badges
+                .call_mut()
                 .new_badge("Phala Workshop: Easy".to_string())
                 .expect("Should be able to create badges");
 
             // Can add an issuer
-            assert!(fat_badges.add_issuer(id, accounts.bob).is_ok());
+            assert!(fat_badges.call_mut().add_issuer(id, accounts.bob).is_ok());
 
             // Bob can create another badge
-            set_next_caller(accounts.bob);
+            stack.switch_account(accounts.bob).unwrap();
             let id_adv = fat_badges
+                .call_mut()
                 .new_badge("Phala Workshop: Advanced".to_string())
                 .expect("Should be able to create badges");
-            set_next_caller(accounts.alice);
+            stack.switch_account(accounts.alice).unwrap();
             assert_eq!(
-                fat_badges.add_issuer(id_adv, accounts.bob),
+                fat_badges.call_mut().add_issuer(id_adv, accounts.bob),
                 Err(Error::BadOrigin),
                 "Only the badge owner can add issuers"
             );
             assert_eq!(
-                fat_badges.add_issuer(999, accounts.bob),
+                fat_badges.call_mut().add_issuer(999, accounts.bob),
                 Err(Error::BadgeNotFound),
                 "Non-existing badge"
             );
 
             // Can remove an issuer
-            assert!(fat_badges.add_issuer(id, accounts.charlie).is_ok());
-            assert!(fat_badges.remove_issuer(id, accounts.charlie).is_ok());
-            assert!(!fat_badges.is_badge_issuer(id, accounts.charlie));
+            assert!(fat_badges
+                .call_mut()
+                .add_issuer(id, accounts.charlie)
+                .is_ok());
+            assert!(fat_badges
+                .call_mut()
+                .remove_issuer(id, accounts.charlie)
+                .is_ok());
+            assert!(!fat_badges.call().is_badge_issuer(id, accounts.charlie));
 
             // Can add code
             assert!(fat_badges
+                .call_mut()
                 .add_code(id, vec!["code1".to_string(), "code2".to_string()])
                 .is_ok());
-            set_next_caller(accounts.bob);
+            stack.switch_account(accounts.bob).unwrap();
             assert_eq!(
-                fat_badges.add_code(id, vec![]),
+                fat_badges.call_mut().add_code(id, vec![]),
                 Err(Error::BadOrigin),
                 "Only the badge owner can add code"
             );
 
             // Check the badge stats
-            let badge = fat_badges.get_badge_info(id).unwrap();
+            let badge = fat_badges.call().get_badge_info(id).unwrap();
             assert_eq!(badge.num_code, 2);
             assert_eq!(badge.num_issued, 0);
 
             // Can issue badges to Django and Eve
-            set_next_caller(accounts.alice);
-            assert!(fat_badges.issue(id, accounts.django).is_ok());
+            stack.switch_account(accounts.alice).unwrap();
+            assert!(fat_badges.call_mut().issue(id, accounts.django).is_ok());
             assert_eq!(
-                fat_badges.issue(id, accounts.django),
+                fat_badges.call_mut().issue(id, accounts.django),
                 Err(Error::Duplicated),
                 "Cannot issue duplicated badges"
             );
-            set_next_caller(accounts.bob);
-            assert!(fat_badges.issue(id, accounts.eve).is_ok());
+            stack.switch_account(accounts.bob).unwrap();
+            assert!(fat_badges.call_mut().issue(id, accounts.eve).is_ok());
             assert_eq!(
-                fat_badges.issue(id, accounts.frank),
+                fat_badges.call_mut().issue(id, accounts.frank),
                 Err(Error::RunOutOfCode),
                 "No code available to issue badges"
             );
 
             // Adding a new code solves the problem
-            set_next_caller(accounts.alice);
-            assert!(fat_badges.add_code(id, vec!["code3".to_string()]).is_ok());
-            assert!(fat_badges.issue(id, accounts.frank).is_ok());
+            stack.switch_account(accounts.alice).unwrap();
+            assert!(fat_badges
+                .call_mut()
+                .add_code(id, vec!["code3".to_string()])
+                .is_ok());
+            assert!(fat_badges.call_mut().issue(id, accounts.frank).is_ok());
 
             // Code can be revealed
-            set_next_caller(accounts.django);
-            assert_eq!(fat_badges.get(id), Ok("code1".to_string()));
-            set_next_caller(accounts.eve);
-            assert_eq!(fat_badges.get(id), Ok("code2".to_string()));
-            set_next_caller(accounts.frank);
-            assert_eq!(fat_badges.get(id), Ok("code3".to_string()));
-            set_next_caller(accounts.alice);
-            assert_eq!(fat_badges.get(id), Err(Error::NotFound));
+            stack.switch_account(accounts.django).unwrap();
+            assert_eq!(fat_badges.call().get(id), Ok("code1".to_string()));
+            stack.switch_account(accounts.eve).unwrap();
+            assert_eq!(fat_badges.call().get(id), Ok("code2".to_string()));
+            stack.switch_account(accounts.frank).unwrap();
+            assert_eq!(fat_badges.call().get(id), Ok("code3".to_string()));
+            stack.switch_account(accounts.alice).unwrap();
+            assert_eq!(fat_badges.call().get(id), Err(Error::NotFound));
 
             // Final checks
-            let badge = fat_badges.get_badge_info(id).unwrap();
+            let badge = fat_badges.call().get_badge_info(id).unwrap();
             assert_eq!(badge.num_code, 3);
             assert_eq!(badge.num_issued, 3);
-            assert_eq!(fat_badges.get_total_badges(), 2)
+            assert_eq!(fat_badges.call().get_total_badges(), 2);
         }
     }
 }

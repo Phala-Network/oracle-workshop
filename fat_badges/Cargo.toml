@@ -15,6 +15,8 @@ ink_lang = { version = "3", default-features = false }
 scale = { package = "parity-scale-codec", version = "3", default-features = false, features = ["derive"] }
 scale-info = { version = "2", default-features = false, features = ["derive"], optional = true }
 
+openbrush = { path = "../vendor/openbrush-contracts", version = "~2.0.0", default-features = false }
+
 [lib]
 name = "fat_badges"
 path = "lib.rs"
