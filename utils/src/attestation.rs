@@ -7,7 +7,7 @@ use pink_extension as pink;
 use scale::{Decode, Encode};
 
 /// A signed payload produced by a [`Generator`], and can be validated by [`Verifier`].
-#[derive(Clone, Encode, Decode)]
+#[derive(Clone, Encode, Decode, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
 pub struct Attestation {
     pub data: Vec<u8>,
