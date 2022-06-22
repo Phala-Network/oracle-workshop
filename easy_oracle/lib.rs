@@ -244,10 +244,6 @@ mod easy_oracle {
             ink_env::test::default_accounts::<Environment>()
         }
 
-        fn set_next_caller(caller: AccountId) {
-            ink_env::test::set_caller::<Environment>(caller);
-        }
-
         #[ink::test]
         fn can_parse_gist_url() {
             let result = parse_gist_url("https://gist.githubusercontent.com/h4x3rotab/0cabeb528bdaf30e4cf741e26b714e04/raw/620f958fb92baba585a77c1854d68dc986803b4e/test%2520gist");
@@ -306,10 +302,9 @@ mod easy_oracle {
             let accounts = default_accounts();
 
             use crate::issuable::mock_issuable;
-            use openbrush::traits::mock::{Addressable, ManagedCallStack};
-            use std::{cell::RefCell, rc::Rc};
+            use openbrush::traits::mock::{Addressable, SharedCallStack};
 
-            let stack = ManagedCallStack::create_shared(accounts.alice);
+            let stack = SharedCallStack::new(accounts.alice);
             mock_issuable::using(stack.clone(), || {
                 // Deploy a FatBadges contract
                 let badges = mock_issuable::deploy(fat_badges::FatBadges::new());
