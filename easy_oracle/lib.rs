@@ -3,28 +3,8 @@
 
 use pink_extension as pink;
 
-// Define a trait for cross-contract call. Necessary to enable it in unit tests.
-pub mod issuable {
-    use ink_env::AccountId;
-    use ink_lang as ink;
-
-    trace_macros!(true);
-
-    #[openbrush::trait_definition(mock = fat_badges::FatBadges)]
-    pub trait Issuable {
-        #[ink(message)]
-        fn issue(&mut self, id: u32, dest: AccountId) -> fat_badges::Result<()>;
-    }
-
-    trace_macros!(false);
-
-    #[openbrush::wrapper]
-    pub type IssuableRef = dyn Issuable;
-}
-
 #[pink::contract(env=PinkEnvironment)]
 mod easy_oracle {
-    use crate::issuable::IssuableRef;
     use crate::pink::{http_get, PinkEnvironment};
 
     use fat_utils::attestation;
@@ -35,6 +15,8 @@ mod easy_oracle {
     use ink_storage::traits::SpreadAllocate;
     use ink_storage::Mapping;
     use scale::{Decode, Encode};
+
+    use fat_badges::issuable::IssuableRef;
 
     #[ink(storage)]
     #[derive(SpreadAllocate)]
@@ -237,7 +219,6 @@ mod easy_oracle {
     #[cfg(test)]
     mod tests {
         use super::*;
-        use ink_env::AccountId;
         use ink_lang as ink;
 
         fn default_accounts() -> ink_env::test::DefaultAccounts<PinkEnvironment> {
@@ -301,7 +282,7 @@ mod easy_oracle {
             // Test accounts
             let accounts = default_accounts();
 
-            use crate::issuable::mock_issuable;
+            use fat_badges::issuable::mock_issuable;
             use openbrush::traits::mock::{Addressable, SharedCallStack};
 
             let stack = SharedCallStack::new(accounts.alice);

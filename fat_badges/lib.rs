@@ -4,6 +4,21 @@ use ink_lang as ink;
 
 pub use crate::fat_badges::{FatBadges, Result};
 
+// Define a trait for cross-contract call. Necessary to enable it in unit tests.
+pub mod issuable {
+    use ink_env::AccountId;
+    use ink_lang as ink;
+
+    #[openbrush::trait_definition(mock = crate::FatBadges)]
+    pub trait Issuable {
+        #[ink(message)]
+        fn issue(&mut self, id: u32, dest: AccountId) -> crate::Result<()>;
+    }
+
+    #[openbrush::wrapper]
+    pub type IssuableRef = dyn Issuable;
+}
+
 #[ink::contract]
 mod fat_badges {
     use ink_prelude::{string::String, vec::Vec};

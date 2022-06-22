@@ -16,6 +16,7 @@ scale = { package = "parity-scale-codec", version = "3", default-features = fals
 scale-info = { version = "2", default-features = false, features = ["derive"], optional = true }
 
 openbrush = { path = "../vendor/openbrush-contracts", version = "~2.0.0", default-features = false }
+environmental = { path = "../utils/environmental", default-features = false, optional = true }
 
 [lib]
 name = "fat_badges"
@@ -38,4 +39,6 @@ std = [
     "scale-info/std",
 ]
 ink-as-dependency = []
-mockable = []
+mockable = [
+    "environmental",
+]
