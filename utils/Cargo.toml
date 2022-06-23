@@ -19,6 +19,10 @@ scale-info = { version = "2", default-features = false, features = ["derive"], o
 pink-extension = { version = "0.1.7", default-features = false }
 hex = { version = "0.4.3", default-features = false, features = ["alloc"] }
 
+[lib]
+name = "fat_utils"
+path = "src/lib.rs"
+
 [features]
 default = ["std"]
 std = [

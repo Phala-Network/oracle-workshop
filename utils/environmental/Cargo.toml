@@ -9,3 +9,7 @@ edition = "2018"
 [features]
 default = ["std"]
 std = []
+
+[lib]
+name = "environmental"
+path = "src/lib.rs"
