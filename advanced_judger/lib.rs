@@ -5,6 +5,7 @@ use pink_extension as pink;
 mod submittable {
     use fat_utils::attestation::{Attestation, Verifier};
     use ink_env::AccountId;
+    use ink_prelude::string::String;
     use ink_lang as ink;
     use ink_prelude::vec::Vec;
 

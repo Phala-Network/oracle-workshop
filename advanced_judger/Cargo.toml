@@ -49,3 +49,7 @@ std = [
     "fat_utils/std",
 ]
 ink-as-dependency = []
+mockable = [
+    "fat_badges/mockable",
+    "openbrush/mockable",
+]

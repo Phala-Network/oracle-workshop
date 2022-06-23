@@ -24,7 +24,6 @@ fat_utils = { path = "../utils", default-features = false }
 
 [dev-dependencies]
 environmental = { path = "../utils/environmental", default-features = false }
-fat_badges = { path = "../fat_badges", default-features = false, features = ["ink-as-dependency", "mockable"] }
 
 [lib]
 name = "easy_oracle"
@@ -41,6 +40,7 @@ std = [
     "ink_env/std",
     "ink_storage/std",
     "ink_primitives/std",
+    "openbrush/std",
     "scale/std",
     "scale-info/std",
     "pink-extension/std",
@@ -48,3 +48,7 @@ std = [
     "fat_utils/std",
 ]
 ink-as-dependency = []
+mockable = [
+    "fat_badges/mockable",
+    "openbrush/mockable",
+]

@@ -41,4 +41,5 @@ std = [
 ink-as-dependency = []
 mockable = [
     "environmental",
+    "openbrush/mockable",
 ]
