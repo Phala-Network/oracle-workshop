@@ -19,8 +19,10 @@ pub mod issuable {
     pub type IssuableRef = dyn Issuable;
 }
 
-#[ink::contract]
+#[openbrush::contract]
 mod fat_badges {
+    use super::issuable::*;
+    use ink_lang::codegen::Env;
     use ink_prelude::{string::String, vec::Vec};
     use ink_storage::traits::{PackedLayout, SpreadAllocate, SpreadLayout};
     use ink_storage::Mapping;
@@ -140,34 +142,6 @@ mod fat_badges {
             Ok(())
         }
 
-        /// Issues a badge to the `dest` account
-        ///
-        /// The caller must be the badge admin or a badge issuer. Return a `RunOutOfCode` error
-        /// when there's no enough redeem code to issue.
-        #[ink(message)]
-        pub fn issue(&mut self, id: u32, dest: AccountId) -> Result<()> {
-            let caller = self.env().caller();
-            let mut badge = self.ensure_badge(id)?;
-            // Allow the badge issuers or the badge admin
-            if !self.badge_issuers.contains((id, caller)) && caller != badge.admin {
-                return Err(Error::NotAnIssuer);
-            }
-            // Make sure we don't issue more than what we have
-            if badge.num_issued >= badge.num_code {
-                return Err(Error::RunOutOfCode);
-            }
-            // No duplication
-            if self.badge_assignments.contains((id, dest)) {
-                return Err(Error::Duplicated);
-            }
-            // Update assignment and issued count
-            let idx = badge.num_issued;
-            self.badge_assignments.insert((id, dest), &idx);
-            badge.num_issued += 1;
-            self.badge_info.insert(id, &badge);
-            Ok(())
-        }
-
         // Queries
 
         /// Returns the number of all the badges
@@ -224,6 +198,36 @@ mod fat_badges {
                 return Err(Error::BadOrigin);
             }
             Ok(badge)
+        }
+    }
+
+    impl Issuable for FatBadges {
+        /// Issues a badge to the `dest` account
+        ///
+        /// The caller must be the badge admin or a badge issuer. Return a `RunOutOfCode` error
+        /// when there's no enough redeem code to issue.
+        #[ink(message)]
+        fn issue(&mut self, id: u32, dest: AccountId) -> Result<()> {
+            let caller = self.env().caller();
+            let mut badge = self.ensure_badge(id)?;
+            // Allow the badge issuers or the badge admin
+            if !self.badge_issuers.contains((id, caller)) && caller != badge.admin {
+                return Err(Error::NotAnIssuer);
+            }
+            // Make sure we don't issue more than what we have
+            if badge.num_issued >= badge.num_code {
+                return Err(Error::RunOutOfCode);
+            }
+            // No duplication
+            if self.badge_assignments.contains((id, dest)) {
+                return Err(Error::Duplicated);
+            }
+            // Update assignment and issued count
+            let idx = badge.num_issued;
+            self.badge_assignments.insert((id, dest), &idx);
+            badge.num_issued += 1;
+            self.badge_info.insert(id, &badge);
+            Ok(())
         }
     }
 
