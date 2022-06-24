@@ -1,0 +1,12 @@
+{
+  "name": "oracle-workshop-scripts",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "private": true,
+  "dependencies": {
+    "@phala/sdk": "^0.3.1",
+    "@polkadot/api": "^8.9.1",
+    "@polkadot/api-contract": "^8.9.1"
+  }
+}
