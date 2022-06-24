@@ -5,7 +5,9 @@ use pink_extension as pink;
 
 #[pink::contract(env=PinkEnvironment)]
 mod easy_oracle {
-    use crate::pink::{http_get, PinkEnvironment};
+    use super::pink;
+    use pink::logger::{Level, Logger};
+    use pink::{http_get, PinkEnvironment};
 
     use fat_utils::attestation;
     use ink_prelude::{
@@ -17,6 +19,9 @@ mod easy_oracle {
     use scale::{Decode, Encode};
 
     use fat_badges::issuable::IssuableRef;
+
+    static LOGGER: Logger = Logger::with_max_level(Level::Info);
+    pink::register_logger!(&LOGGER);
 
     #[ink(storage)]
     #[derive(SpreadAllocate)]
@@ -98,10 +103,12 @@ mod easy_oracle {
                 .ok_or(Error::InvalidSignature)?;
             // The caller must be the attested account
             if data.account_id != self.env().caller() {
+                pink::warn!("No permission.");
                 return Err(Error::NoPermission);
             }
 
             if self.linked_users.contains(data.username) {
+                pink::warn!("Username alreay in use.");
                 return Err(Error::UsernameAlreadyInUse);
             }
 
@@ -109,11 +116,12 @@ mod easy_oracle {
                 .badge_contract_options
                 .as_mut()
                 .ok_or(Error::BadgeContractNotSetUp)?;
+            pink::warn!("Got badge contract. Calling...");
 
             let badges: &IssuableRef = contract;
-            badges
-                .issue(*id, data.account_id)
-                .or(Err(Error::FailedToIssueBadge))
+            let result = badges.issue(*id, data.account_id);
+            pink::warn!("Badges.issue() result = {:?}", result);
+            result.or(Err(Error::FailedToIssueBadge))
         }
 
         // Queries
