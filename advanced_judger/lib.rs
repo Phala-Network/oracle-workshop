@@ -123,6 +123,7 @@ mod advanced_judger {
         /// Sets the downstream badge contract
         ///
         /// Only the admin can call it.
+        #[ink(message)]
         pub fn config_issuer(&mut self, contract: AccountId, badge_id: u32) -> Result<()> {
             let caller = self.env().caller();
             if caller != self.admin {

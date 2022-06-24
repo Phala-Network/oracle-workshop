@@ -2,7 +2,7 @@
 use core::fmt;
 use ink_prelude::vec::Vec;
 use ink_storage::traits::{PackedLayout, SpreadAllocate, SpreadLayout};
-use pink::{chain_extension::SigType, derive_sr25519_key, get_public_key, sign, verify};
+use pink::chain_extension::{signing, SigType};
 use pink_extension as pink;
 use scale::{Decode, Encode};
 
@@ -28,7 +28,7 @@ pub struct Verifier {
 impl Verifier {
     /// Verifies an attestation
     pub fn verify(&self, attestation: &Attestation) -> bool {
-        verify!(
+        signing::verify(
             &attestation.data,
             &self.pubkey,
             &attestation.signature,
@@ -59,7 +59,7 @@ impl Generator {
     /// Produces a signed attestation with the given `data`
     pub fn sign<T: Clone + Encode + Decode>(&self, data: T) -> Attestation {
         let encoded = Encode::encode(&data);
-        let signature = sign!(&encoded, &self.privkey, SigType::Sr25519);
+        let signature = signing::sign(&encoded, &self.privkey, SigType::Sr25519);
         Attestation {
             data: encoded,
             signature,
@@ -76,8 +76,8 @@ impl fmt::Debug for Generator {
 
 /// Creates a pair of attestation utility to do off-chain attestation
 pub fn create(salt: &[u8]) -> (Generator, Verifier) {
-    let privkey = derive_sr25519_key!(salt);
-    let pubkey = get_public_key!(&privkey, SigType::Sr25519);
+    let privkey = signing::derive_sr25519_key(salt);
+    let pubkey = signing::get_public_key(&privkey, SigType::Sr25519);
     (Generator { privkey }, Verifier { pubkey })
 }
 
