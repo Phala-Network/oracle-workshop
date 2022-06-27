@@ -4,6 +4,7 @@
 use fat_utils::attestation;
 use ink_env::AccountId;
 use ink_lang as ink;
+use ink_prelude::{string::String, vec::Vec};
 use pink_extension as pink;
 
 #[ink::trait_definition]
