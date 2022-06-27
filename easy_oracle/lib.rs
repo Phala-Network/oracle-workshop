@@ -1,11 +1,27 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![feature(trace_macros)]
 
+use fat_utils::attestation;
+use ink_env::AccountId;
+use ink_lang as ink;
 use pink_extension as pink;
+
+#[ink::trait_definition]
+pub trait SubmittableOracle {
+    #[ink(message)]
+    fn admin(&self) -> AccountId;
+
+    #[ink(message)]
+    fn verifier(&self) -> attestation::Verifier;
+
+    #[ink(message)]
+    fn attest(&self, arg: String) -> Result<attestation::Attestation, Vec<u8>>;
+}
 
 #[pink::contract(env=PinkEnvironment)]
 mod easy_oracle {
     use super::pink;
+    use super::SubmittableOracle;
     use pink::logger::{Level, Logger};
     use pink::{http_get, PinkEnvironment};
 
@@ -71,8 +87,6 @@ mod easy_oracle {
             })
         }
 
-        // Commands
-
         /// Sets the downstream badge contract
         ///
         /// Only the admin can call it.
@@ -124,6 +138,14 @@ mod easy_oracle {
             result.or(Err(Error::FailedToIssueBadge))
         }
 
+        /// Helper query to return the account id of the current contract instance
+        #[ink(message)]
+        pub fn get_id(&self) -> AccountId {
+            self.env().account_id()
+        }
+    }
+
+    impl SubmittableOracle for EasyOracle {
         // Queries
 
         /// Attests a Github Gist by the raw file url. (Query only)
@@ -136,10 +158,7 @@ mod easy_oracle {
         /// Particularly, when another contract wants to call us, they may not want to depend on
         /// any special type defined by us (`Error` in this case). So we only return generic types.
         #[ink(message)]
-        pub fn attest(
-            &self,
-            url: String,
-        ) -> core::result::Result<attestation::Attestation, Vec<u8>> {
+        fn attest(&self, url: String) -> core::result::Result<attestation::Attestation, Vec<u8>> {
             // Verify the URL
             let gist_url = parse_gist_url(&url).map_err(|e| e.encode())?;
             // Fetch the gist content
@@ -159,20 +178,14 @@ mod easy_oracle {
         }
 
         #[ink(message)]
-        pub fn admin(&self) -> AccountId {
+        fn admin(&self) -> AccountId {
             self.admin.clone()
         }
 
         /// The attestation verifier
         #[ink(message)]
-        pub fn verifier(&self) -> attestation::Verifier {
+        fn verifier(&self) -> attestation::Verifier {
             self.attestation_verifier.clone()
-        }
-
-        /// Helper query to return the account id of the current contract instance
-        #[ink(message)]
-        pub fn get_id(&self) -> AccountId {
-            self.env().account_id()
         }
     }
 
@@ -294,17 +307,7 @@ mod easy_oracle {
         #[ink::test]
         fn end_to_end() {
             use pink_extension::chain_extension::{mock, HttpResponse};
-
-            // Mock derive key call (a pregenerated key pair)
-            mock::mock_derive_sr25519_key(|_| {
-                hex::decode("78003ee90ff2544789399de83c60fa50b3b24ca86c7512d0680f64119207c80ab240b41344968b3e3a71a02c0e8b454658e00e9310f443935ecadbdd1674c683").unwrap()
-            });
-            mock::mock_get_public_key(|_| {
-                hex::decode("ce786c340288b79a951c68f87da821d6c69abd1899dff695bda95e03f9c0b012")
-                    .unwrap()
-            });
-            mock::mock_sign(|_| b"mock-signature".to_vec());
-            mock::mock_verify(|_| true);
+            fat_utils::test_helper::mock_all();
 
             // Test accounts
             let accounts = default_accounts();
