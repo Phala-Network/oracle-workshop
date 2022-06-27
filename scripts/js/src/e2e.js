@@ -204,21 +204,20 @@ async function main() {
 
     // basic checks
     console.log('Fat Contract: basic checks');
-    const opt = { value: 0, gasLimit: -1 };
     console.assert(
-        (await FatBadges.query.getTotalBadges(certAlice, opt)).output.toNumber() == 2,
+        (await FatBadges.query.getTotalBadges(certAlice, {})).output.toNumber() == 2,
         'Should have two badges created'
     );
 
-    const easyInfo = await FatBadges.query.getBadgeInfo(certAlice, opt, easyBadgeId)
+    const easyInfo = await FatBadges.query.getBadgeInfo(certAlice, {}, easyBadgeId);
     console.log('Easy badge:', easyInfo.output.toHuman());
 
-    const advInfo = await FatBadges.query.getBadgeInfo(certAlice, opt, advBadgeId)
+    const advInfo = await FatBadges.query.getBadgeInfo(certAlice, {}, advBadgeId);
     console.log('Adv badge:', advInfo.output.toHuman());
 
     // create an attestation
-    const attest = await EasyOracle.query.attest(
-        certAlice, opt,
+    const attest = await EasyOracle.query['submittableOracle::attest'](
+        certAlice, {},
         'https://gist.githubusercontent.com/h4x3rotab/4b6bb4aa8dc9956af9c976a906daaa2a/raw/80da37a6e9e91b9e3929ba284c826631644f7d1a/test'
     );
     console.log(
@@ -236,12 +235,31 @@ async function main() {
     );
     await blockBarrier(api, prpc);
 
-    const aliceBadge = await FatBadges.query.get(certAlice, opt, easyBadgeId);
+    const aliceBadge = await FatBadges.query.get(certAlice, {}, easyBadgeId);
     console.log('Alice won:', aliceBadge.output.toHuman());
 
-    // now we can use:
-    // contract.query.xxxYyy(cert, {}, ...args)
-    // contract.tx.xxxYyy({}, ...args).signAndSend(alice)
+    // test the advanced challenge judger
+    const advAttest = await AdvancedJudger.query.checkContract(
+        certAlice, {},
+        artifacts.EasyOracle.address,
+        'https://gist.githubusercontent.com/h4x3rotab/4b6bb4aa8dc9956af9c976a906daaa2a/raw/80da37a6e9e91b9e3929ba284c826631644f7d1a/test'
+    );
+    console.log(
+        'Advanced attestation:',
+        advAttest.result.isOk ? advAttest.output.toHuman() : advAttest.result.toHuman()
+    );
+    const advAttestObj = advAttest.output.asOk;
+
+    // submit attestation
+    await txqueue.submit(
+        AdvancedJudger.tx.redeem({}, advAttestObj),
+        bob,
+        true,
+    );
+    await blockBarrier(api, prpc);
+
+    const aliceAdvBadge = await FatBadges.query.get(certBob, {}, advBadgeId);
+    console.log('Bob won adv:', aliceAdvBadge.output.toHuman());
 }
 
 main().then(process.exit).catch(err => console.error('Crashed', err)).finally(() => process.exit(-1));
