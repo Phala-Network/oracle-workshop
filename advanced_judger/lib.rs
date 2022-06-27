@@ -200,12 +200,6 @@ mod advanced_judger {
             let result = self.attestation_generator.sign(quote);
             Ok(result)
         }
-
-        /// Helper query to return the account id of the current contract instance
-        #[ink(message)]
-        pub fn get_id(&self) -> AccountId {
-            self.env().account_id()
-        }
     }
 
     #[derive(Clone, Encode, Decode, Debug)]

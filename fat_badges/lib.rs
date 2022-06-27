@@ -177,12 +177,6 @@ mod fat_badges {
             Ok(code)
         }
 
-        /// Helper query to return the account id of the current contract instance
-        #[ink(message)]
-        pub fn get_id(&self) -> AccountId {
-            self.env().account_id()
-        }
-
         // Helper functions
 
         /// Returns the badge info if it exists

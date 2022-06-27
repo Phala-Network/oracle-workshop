@@ -120,28 +120,22 @@ mod easy_oracle {
                 pink::warn!("No permission.");
                 return Err(Error::NoPermission);
             }
-
-            if self.linked_users.contains(data.username) {
+            // The github username can only link to one account
+            if self.linked_users.contains(&data.username) {
                 pink::warn!("Username alreay in use.");
                 return Err(Error::UsernameAlreadyInUse);
             }
-
+            self.linked_users.insert(&data.username, &());
+            // Call the badges contract to issue the NFT
             let (contract, id) = self
                 .badge_contract_options
                 .as_mut()
                 .ok_or(Error::BadgeContractNotSetUp)?;
-            pink::warn!("Got badge contract. Calling...");
 
             let badges: &IssuableRef = contract;
             let result = badges.issue(*id, data.account_id);
             pink::warn!("Badges.issue() result = {:?}", result);
             result.or(Err(Error::FailedToIssueBadge))
-        }
-
-        /// Helper query to return the account id of the current contract instance
-        #[ink(message)]
-        pub fn get_id(&self) -> AccountId {
-            self.env().account_id()
         }
     }
 
