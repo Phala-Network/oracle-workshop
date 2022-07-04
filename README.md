@@ -1,6 +1,6 @@
 # Fat Contract Oracle Workshop
 
-_First created for Polkadot Decoded 2022 with the subtitle "The Web3 infrastructure beyound smart contracts: Build an oracle in 15 mins with ink!"_
+_First created for Polkadot Decoded 2022 with the subtitle "The Web3 infrastructure beyound smart contracts: Build an oracle in 15 mins with ink!"_ ([Slides](https://docs.google.com/presentation/d/1HjmQCSvwpc7gwaCU2W_5yHA3gTIrg49SpSUZ4gLZwD8/edit?usp=sharing))
 
 ## What you can learn
 
