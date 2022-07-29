@@ -111,7 +111,7 @@ mod fat_badges {
         /// The caller must be the badge admin.
         #[ink(message)]
         pub fn add_issuer(&mut self, id: u32, issuer: AccountId) -> Result<()> {
-            self.esure_badge_admin(id)?;
+            self.ensure_badge_admin(id)?;
             self.badge_issuers.insert((id, issuer), &());
             Ok(())
         }
@@ -121,7 +121,7 @@ mod fat_badges {
         /// The caller must be the badge admin.
         #[ink(message)]
         pub fn remove_issuer(&mut self, id: u32, issuer: AccountId) -> Result<()> {
-            self.esure_badge_admin(id)?;
+            self.ensure_badge_admin(id)?;
             self.badge_issuers.remove((id, issuer));
             Ok(())
         }
@@ -131,7 +131,7 @@ mod fat_badges {
         /// The caller must be the badge admin.
         #[ink(message)]
         pub fn add_code(&mut self, id: u32, code: Vec<String>) -> Result<()> {
-            let mut badge = self.esure_badge_admin(id)?;
+            let mut badge = self.ensure_badge_admin(id)?;
             let start = badge.num_code;
             badge.num_code += code.len() as u32;
             for (i, entry) in code.iter().enumerate() {
@@ -185,7 +185,7 @@ mod fat_badges {
         }
 
         /// Returns the badge if the it exists and the caller is the admin
-        fn esure_badge_admin(&self, id: u32) -> Result<BadgeInfo> {
+        fn ensure_badge_admin(&self, id: u32) -> Result<BadgeInfo> {
             let caller = self.env().caller();
             let badge = self.badge_info.get(id).ok_or(Error::BadgeNotFound)?;
             if badge.admin != caller {
