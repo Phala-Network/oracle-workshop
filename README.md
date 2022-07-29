@@ -282,8 +282,8 @@ The following toolchains are needed:
 - Ink! Contract toolchain
     - Install [binaryen](https://github.com/WebAssembly/binaryen) with
         - Homebrew for macOS: `brew install binaryen`
-        - Apt for Ubuntu: `sudo apt install binaryen`
-        - or download the [release](https://github.com/WebAssembly/binaryen/releases/tag/version_105) and put it under your `$PATH`
+        - For Linux / Unix, download the latest version from [the Github release page](https://github.com/WebAssembly/binaryen/releases) and put it under your `$PATH`
+        - **Note**: Linux package managers may download legacy binaryen. We strongly suggest to install the latest binary from the Github release page listed above.
     - Install dylint-link toolchain: `cargo install cargo-dylint dylint-link`
     - Install contract toolchain: `cargo install cargo-contract --force`
     - For macOS M1 chip users: `rustup component add rust-src --toolchain nightly-aarch64-apple-darwin`
@@ -485,3 +485,31 @@ You can find basic usage from the [`@phala/sdk` readme](https://github.com/Phala
 - [End-to-end test](https://github.com/Phala-Network/oracle-workshop/blob/3fe330fcdfef8f088896c3fba07c9bc79ccecea5/scripts/js/src/e2e.js#L180-L262)
 - [Decoded Workshop DApp source](https://github.com/Phala-Network/js-sdk/blob/6c26c1aef0b6ea6eb85b5d75f1492f120233047c/packages/example/pages/easy-challenge.tsx)
 - [`@phala/sdk` readme](https://github.com/Phala-Network/js-sdk/tree/decoded-2022/packages/sdk)
+
+## Troubleshooting
+
+### Failed to compile with edition2021 error
+
+> "ERROR: Error invoking cargo metadata", "feature `edition2021` is required"
+
+Please make sure your rust toolchain is at the latest version by running:
+
+```bash
+rustup update
+```
+
+### Failed to compile with rustlib error
+
+> error: ".../.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/Cargo.lock" does not exist, unable to build with the standard library
+
+Try to add the `rust-src` component:
+
+```bash
+rustup component add rust-src --toolchain nightly
+```
+
+### Too old binaryen (wasm-opt)
+
+> ERROR: Your wasm-opt version is 91, but we require a version >= 99
+
+Please unisntall your current `binaryen` and reinstall the latest version from [the official repo](https://github.com/WebAssembly/binaryen/releases).
