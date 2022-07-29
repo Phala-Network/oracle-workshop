@@ -302,7 +302,7 @@ mod easy_oracle {
         #[ink::test]
         fn end_to_end() {
             use pink_extension::chain_extension::{mock, HttpResponse};
-            fat_utils::test_helper::mock_all();
+            pink_extension_runtime::mock_ext::mock_all_ext();
 
             // Test accounts
             let accounts = default_accounts();
