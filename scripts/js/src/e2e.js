@@ -83,7 +83,7 @@ async function deployContracts(api, txqueue, pair, artifacts, clusterId) {
     const { events: deployEvents } = await txqueue.submit(
         api.tx.utility.batchAll(
             Object.entries(artifacts).flatMap(([_k, v]) => [
-                api.tx.phalaFatContracts.uploadCodeToCluster(v.wasm, clusterId),
+                api.tx.phalaFatContracts.clusterUploadResource(clusterId, 'InkCode', v.wasm),
                 api.tx.phalaFatContracts.instantiateContract(
                     { WasmCode: v.metadata.source.hash },
                     v.constructor,
