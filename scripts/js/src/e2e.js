@@ -5,23 +5,8 @@ const {ApiPromise, WsProvider, Keyring} = require('@polkadot/api');
 const {ContractPromise} = require('@polkadot/api-contract');
 const Phala = require('@phala/sdk');
 
-const { TxQueue, checkUntil, checkUntilEq, blockBarrier, hex } = require('./utils.js');
-
-const CONTRACT_NAMES = [
-    ['fat_badges', 'FatBadges'],
-    ['easy_oracle', 'EasyOracle'],
-    ['advanced_judger', 'AdvancedJudger'],
-]
-
-function loadContract(name) {
-    const wasmPath = `../../target/ink/${name}/${name}.wasm`;
-    const metadataPath = `../../target/ink/${name}/metadata.json`;
-    const wasm = hex(fs.readFileSync(wasmPath, 'hex'));
-    const metadata = JSON.parse(fs.readFileSync(metadataPath));
-    const constructor = metadata.V3.spec.constructors.find(c => c.label == 'new').selector;
-    return {wasm, metadata, constructor};
-}
-
+const { TxQueue, checkUntil, blockBarrier, hex } = require('./utils');
+const { loadArtifacts, deployContracts } = require('./common');
 
 async function getWorkerPubkey(api) {
     const workers = await api.query.phalaRegistry.workers.entries();
@@ -76,56 +61,8 @@ async function deployCluster(api, txqueue, pair, worker, defaultCluster = '0x000
     return clusterId;
 }
 
-async function deployContracts(api, txqueue, pair, artifacts, clusterId) {
-    console.log('Contracts: uploading');
-    // upload contracts
-    const contractNames = Object.keys(artifacts);
-    const { events: deployEvents } = await txqueue.submit(
-        api.tx.utility.batchAll(
-            Object.entries(artifacts).flatMap(([_k, v]) => [
-                api.tx.phalaFatContracts.clusterUploadResource(clusterId, 'InkCode', v.wasm),
-                api.tx.phalaFatContracts.instantiateContract(
-                    { WasmCode: v.metadata.source.hash },
-                    v.constructor,
-                    hex(crypto.randomBytes(4).toString('hex')), // salt
-                    clusterId,
-                )
-            ])
-        ),
-        pair
-    );
-    const contractIds = deployEvents
-        .filter(ev => ev.event.section == 'phalaFatContracts' && ev.event.method == 'Instantiating')
-        .map(ev => ev.event.data[0].toString());
-    const numContracts = contractNames.length;
-    console.assert(contractIds.length == numContracts, 'Incorrect length:', `${contractIds.length} vs ${numContracts}`);
-    for (const [i, id] of contractIds.entries()) {
-        artifacts[contractNames[i]].address = id;
-    }
-    await checkUntilEq(
-        async () => (await api.query.phalaFatContracts.clusterContracts(clusterId))
-            .filter(c => contractIds.includes(c.toString()) )
-            .length,
-        numContracts,
-        4 * 6000
-    );
-    console.log('Contracts: uploaded');
-    for (const [name, contract] of Object.entries(artifacts)) {
-        await checkUntil(
-            async () => (await api.query.phalaRegistry.contractKeys(contract.address)).isSome,
-            4 * 6000
-        );
-        console.log('Contracts:', contract.address, name, 'key ready');
-    }
-    console.log('Contracts: deployed');
-}
-
 async function main() {
-    const artifacts = Object.assign(
-        {}, ...CONTRACT_NAMES.map(
-            ([filename, name]) => ({[name]: loadContract(filename)})
-        )
-    );
+    const artifacts = loadArtifacts();
 
     // connect to the chain
     const wsProvider = new WsProvider('ws://localhost:19944');
