@@ -88,8 +88,7 @@ mod test {
 
     #[ink::test]
     fn it_works() {
-        use pink_extension::chain_extension::mock;
-        crate::test_helper::mock_crypto();
+        pink_extension_runtime::mock_ext::mock_all_ext();
 
         // Generate an attestation and verify it later
         #[derive(Clone, Encode, Decode, scale_info::TypeInfo)]

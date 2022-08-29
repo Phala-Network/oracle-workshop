@@ -535,6 +535,7 @@ dependencies = [
  "ink_storage",
  "parity-scale-codec",
  "pink-extension",
+ "pink-extension-runtime",
  "scale-info",
 ]
 
