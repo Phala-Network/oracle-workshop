@@ -1,10 +1,10 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![feature(trace_macros)]
 
-use fat_utils::attestation;
 use ink_env::AccountId;
 use ink_lang as ink;
 use ink_prelude::{string::String, vec::Vec};
+use pink_utils::attestation;
 use pink_extension as pink;
 
 #[ink::trait_definition]
@@ -26,7 +26,7 @@ mod easy_oracle {
     use pink::logger::{Level, Logger};
     use pink::{http_get, PinkEnvironment};
 
-    use fat_utils::attestation;
+    use pink_utils::attestation;
     use ink_prelude::{
         string::{String, ToString},
         vec::Vec,
