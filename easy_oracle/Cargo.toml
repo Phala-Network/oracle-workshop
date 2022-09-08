@@ -17,7 +17,7 @@ scale-info = { version = "2", default-features = false, features = ["derive"], o
 hex = { version = "0.4.3", default-features = false, features = ["alloc"] }
 
 openbrush = { path = "../vendor/openbrush-contracts", version = "~2.1.0", default-features = false }
-pink-extension = { version = "0.1.14", default-features = false }
+pink-extension = { version = "0.1.17", default-features = false }
 pink-utils = { version = "0.1", default-features = false }
 
 fat_badges = { path = "../fat_badges", default-features = false, features = ["ink-as-dependency"] }

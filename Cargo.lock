@@ -1567,9 +1567,9 @@ checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
 
 [[package]]
 name = "pink-extension"
-version = "0.1.14"
+version = "0.1.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "21d67965f21d65738f044087c2f43145c8ae90729ad31d496fd677371980ebf6"
+checksum = "ae573e9c727c667b1b84566a9505585111076f3a67153de45780a39e566c830d"
 dependencies = [
  "ink_env",
  "ink_lang",
