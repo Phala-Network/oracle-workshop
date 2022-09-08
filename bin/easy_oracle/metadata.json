@@ -1,7 +1,7 @@
 {
   "source": {
-    "hash": "0x40fa746d59b6de02c96188114a230bba22e467a11c3509909e96fb7b521907bf",
-    "language": "ink! 3.3.0",
+    "hash": "0xfd1044483430f0050793e0190a8d153e88383d033c38df1f89def54dc20c92c3",
+    "language": "ink! 3.3.1",
     "compiler": "rustc 1.62.0-nightly"
   },
   "contract": {
@@ -519,7 +519,7 @@
             }
           },
           "path": [
-            "fat_utils",
+            "pink_utils",
             "attestation",
             "Attestation"
           ]
@@ -582,7 +582,7 @@
             }
           },
           "path": [
-            "fat_utils",
+            "pink_utils",
             "attestation",
             "Verifier"
           ]

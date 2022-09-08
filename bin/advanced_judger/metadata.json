@@ -1,7 +1,7 @@
 {
   "source": {
-    "hash": "0xa2a53a654fcbbbc49c8bc516638ffeb1befb43f9e913fc7aa848b71b0e975728",
-    "language": "ink! 3.3.0",
+    "hash": "0x6d63e947342160ebf1b01f3916444deb04c0ebcc3e2a3a689887743e182831c1",
+    "language": "ink! 3.3.1",
     "compiler": "rustc 1.62.0-nightly"
   },
   "contract": {
@@ -459,7 +459,7 @@
             }
           },
           "path": [
-            "fat_utils",
+            "pink_utils",
             "attestation",
             "Attestation"
           ]
