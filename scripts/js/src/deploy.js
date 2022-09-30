@@ -42,6 +42,7 @@ async function main() {
     // prepare accounts
     const keyring = new Keyring({type: 'sr25519'})
     const pair = keyring.addFromUri(privkey);
+    console.log('Using account', pair.address);
     const cert = await Phala.signCertificate({api, pair});
 
     // connect to pruntime
