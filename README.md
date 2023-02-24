@@ -1,3 +1,9 @@
+# Deprecated
+
+This workshop is no longer maintained. Please check our updated workshop: [Sub0 2022 Oracle Workshop](https://github.com/Phala-Network/phat-offchain-rollup/blob/main/phat/Sub0-Workshop.md)
+
+----
+
 # Fat Contract Oracle Workshop
 
 _First created for Polkadot Decoded 2022 with the subtitle "The Web3 infrastructure beyond smart contracts: Build an oracle in 15 mins with ink!"_ ([Slides](https://docs.google.com/presentation/d/1HjmQCSvwpc7gwaCU2W_5yHA3gTIrg49SpSUZ4gLZwD8/edit?usp=sharing))
